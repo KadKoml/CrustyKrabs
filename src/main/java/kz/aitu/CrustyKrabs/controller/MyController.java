@@ -54,7 +54,7 @@ public class MyController {
     @GetMapping("/main/allMenuItems")
     public String getAllMenuItems() {
         DbConnection myConnection = new DbConnection();
-        Connection con = null;
+        Connection con;
         ArrayList<MenuItem> menuItems = new ArrayList<>();
         try {
             con = myConnection.connect();
@@ -72,26 +72,6 @@ public class MyController {
         return jsonData;
     }
 
-    @PostMapping("/main/findMenuItem")
-    public String findMenuItemById(@RequestParam int id) {
-        DbConnection myConnection = new DbConnection();
-        Connection con = null;
-        MenuItem menuItem = null;
-        try {
-            con = myConnection.connect();
-            menuItem = myConnection.findMenuItemById(con, id);
-        } catch (Exception e) {
-            System.out.println("Error finding menu item");
-        }
-
-        String jsonData = null;
-        try {
-            jsonData = oMapper.writeValueAsString(menuItem);
-        } catch (Exception e) {
-            System.out.println("Error converting to JSON");
-        }
-        return jsonData;
-    }
 
     @PostMapping("/main/createMenuItem")
     public String createMenuItem(@RequestParam int id, @RequestParam String name, @RequestParam double price) {
@@ -111,38 +91,32 @@ public class MyController {
         return jsonData;
     }
 
-    @PostMapping("/main/updateMenuItem")
+    @PutMapping("/main/updateMenuItem")
     public String updateMenuItem(@RequestParam int id, @RequestParam String newName, @RequestParam double newPrice) {
         DbConnection myConnection = new DbConnection();
-        Connection con = null;
-        MenuItem menuItem = null;
         String jsonData = null;
-        try {
-            con = myConnection.connect();
-            menuItem = myConnection.findMenuItemById(con, id);
-            if (menuItem != null) {
-                menuItem.setName(newName);
-                menuItem.setPrice(newPrice);
-                con = myConnection.connect();
-                myConnection.updateMenuItem(con, menuItem);
+
+        try (Connection con = myConnection.connect()) { // Открываем соединение
+            MenuItem menuItem = new MenuItem(id, newName, newPrice); // Создаем объект
+            MenuItem updatedMenuItem = myConnection.updateMenuItem(con, menuItem); // Обновляем в БД
+
+            if (updatedMenuItem != null) {
+                jsonData = new ObjectMapper().writeValueAsString(updatedMenuItem);
+            } else {
+                jsonData = "{\"error\": \"MenuItem not updated\"}";
             }
         } catch (Exception e) {
             System.out.println("Error updating menu item: " + e.getMessage());
         }
 
-        try {
-            jsonData = oMapper.writeValueAsString(menuItem);
-        } catch (JsonProcessingException e) {
-            System.out.println("Error converting to JSON");
-        }
-
         return jsonData;
     }
 
-    @PostMapping("/main/deleteMenuItem")
+
+    @DeleteMapping("/main/deleteMenuItem")
     public String deleteMenuItem(@RequestParam int id) {
         DbConnection myConnection = new DbConnection();
-        Connection con = null;
+        Connection con;
         MenuItem deletedMenuItem = null;
         String jsonData = null;
         try {

@@ -44,23 +44,6 @@ public class DbConnection {
         return menuItems;
     }
 
-    public MenuItem findMenuItemById(Connection con, int id) throws SQLException {
-        String query = "SELECT * FROM public.menu_items WHERE id = ?";
-        PreparedStatement st = con.prepareStatement(query);
-        st.setInt(1, id);
-        ResultSet rs = st.executeQuery();
-
-        MenuItem item = null;
-        if (rs.next()) {
-            item = new MenuItem();
-            item.setId(rs.getInt("id"));
-            item.setName(rs.getString("name"));
-            item.setPrice(rs.getDouble("price"));
-        }
-        st.close();
-        disconnect(con);
-        return item;
-    }
 
     public MenuItem createMenuItem(Connection con, MenuItem menuItem) throws SQLException {
         String query = "INSERT INTO public.menu_items (id, name, price) VALUES (?, ?, ?)";
@@ -80,21 +63,28 @@ public class DbConnection {
     }
 
     public MenuItem updateMenuItem(Connection con, MenuItem menuItem) throws SQLException {
-        String query = "UPDATE public.menu_items SET name=?, price=? WHERE id=?";
-        PreparedStatement st = con.prepareStatement(query);
-        st.setString(1, menuItem.getName());
-        st.setDouble(2, menuItem.getPrice());
-        st.setInt(3, menuItem.getId());
-
-        int success = st.executeUpdate();
-        st.close();
-        disconnect(con);
-        if (success > 0) {
-            System.out.println("MenuItem updated successfully");
-            return menuItem;
+        if (con == null || con.isClosed()) {
+            throw new SQLException("Connection is already closed or null.");
         }
+
+        String query = "UPDATE public.menu_items SET name=?, price=? WHERE id=?";
+        try (PreparedStatement st = con.prepareStatement(query)) {
+            st.setString(1, menuItem.getName());
+            st.setDouble(2, menuItem.getPrice());
+            st.setInt(3, menuItem.getId());
+
+            int success = st.executeUpdate();
+            if (success > 0) {
+                System.out.println("MenuItem updated successfully");
+                return menuItem;
+            }
+        } catch (SQLException e) {
+            System.out.println("SQL Error: " + e.getMessage());
+        }
+
         return null;
     }
+
 
     public MenuItem deleteMenuItem(Connection con, int id) throws SQLException {
         String query = "DELETE FROM public.menu_items WHERE id=?";
